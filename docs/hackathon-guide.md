@@ -155,7 +155,172 @@ Your CI/CD pipeline should handle the entire process from building your applicat
 - Use GitHub environments to require approvals for production deployments
 - Run security scanning on your container images before deployment
 
-### Challenge 3: GitHub Copilot Integration
+### Challenge 3: Database Modernization with Azure Cosmos DB
+
+While containerized MongoDB within ARO works for development, a production-ready architecture should leverage managed database services for better scalability, reliability, and operational efficiency.
+
+#### Your Challenge: Migrate to Azure Cosmos DB for MongoDB API
+
+1. **Create an Azure Cosmos DB for MongoDB API**
+2. **Update the backend application to connect to Cosmos DB**
+3. **Commit changes to trigger CI pipeline image build**
+4. **Deploy the updated application on ARO**
+
+#### Step-by-Step Implementation Guide
+
+##### 1. Create Azure Cosmos DB with MongoDB API
+
+```bash
+# Create MongoDB-compatible Cosmos DB account
+az cosmosdb create \
+  --name aro-task-manager-db \
+  --resource-group $RESOURCE_GROUP \
+  --kind MongoDB \
+  --capabilities EnableMongo \
+  --server-version 4.0 \
+  --default-consistency-level Session
+
+# Create the database
+az cosmosdb mongodb database create \
+  --account-name aro-task-manager-db \
+  --name taskmanager \
+  --resource-group $RESOURCE_GROUP
+
+# Create the tasks collection
+az cosmosdb mongodb collection create \
+  --account-name aro-task-manager-db \
+  --database-name taskmanager \
+  --name tasks \
+  --resource-group $RESOURCE_GROUP \
+  --shard key _id
+  
+# Get the connection string
+CONNECTION_STRING=$(az cosmosdb keys list \
+  --name aro-task-manager-db \
+  --resource-group $RESOURCE_GROUP \
+  --type connection-strings \
+  --query "connectionStrings[?description=='Primary MongoDB Connection String'].connectionString" -o tsv)
+
+echo "Connection string: $CONNECTION_STRING"
+```
+
+##### 2. Update Backend Application Code
+
+Modify `backend/src/server.js` to handle Cosmos DB connections:
+
+```javascript
+// DB Connection
+const DB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/taskmanager';
+const DB_OPTIONS = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  ...(process.env.MONGODB_URI?.includes('cosmos.azure.com') ? {
+    // Cosmos DB specific options
+    retryWrites: false,
+    ssl: true,
+    tlsAllowInvalidCertificates: false,
+  } : {})
+};
+
+mongoose.connect(DB_URI, DB_OPTIONS)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('MongoDB connection error:', err));
+```
+
+##### 3. Commit and Push Changes
+
+Commit your backend code changes to trigger the CI pipeline:
+
+```bash
+# Add your changes
+git add backend/src/server.js
+
+# Commit with a descriptive message
+git commit -m "Update backend to support Azure Cosmos DB"
+
+# Push to trigger CI pipeline
+git push origin main
+```
+
+Wait for your CI pipeline to complete and build a new container image.
+
+##### 4. Create a Kubernetes Secret for the Connection String
+
+```bash
+# Create a secret for the MongoDB connection string
+oc create secret generic mongodb-credentials \
+  --namespace task-manager \
+  --from-literal=connection-string="$CONNECTION_STRING"
+```
+
+##### 5. Update and Apply Kubernetes Manifests
+
+Create a new file called `backend-deployment-cosmos.yaml`:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: task-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: ${YOUR_ACR_URL}/taskmanager-backend:latest  # Will use the latest image built by CI
+        ports:
+        - containerPort: 3001
+        env:
+        - name: MONGODB_URI
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-credentials
+              key: connection-string
+        - name: PORT
+          value: "3001"
+```
+
+Apply the updated deployment:
+
+```bash
+# Replace ${YOUR_ACR_URL} with your actual ACR URL
+sed "s|\${YOUR_ACR_URL}|$ACR_LOGIN_SERVER|g" backend-deployment-cosmos.yaml | oc apply -f -
+
+# Scale down MongoDB (optional - you can keep it running as a fallback)
+oc scale deployment mongodb --replicas=0 -n task-manager
+```
+
+##### 6. Verify the Application is Working
+
+1. Check that the backend pod is running with the updated configuration:
+   ```bash
+   oc get pods -n task-manager
+   ```
+
+2. View the backend logs to confirm it's connecting to Cosmos DB:
+   ```bash
+   oc logs -f deployment/backend -n task-manager
+   ```
+
+3. Test the application functionality to ensure data operations work correctly.
+
+#### Benefits of This Migration
+
+- **Reduced Cluster Resource Usage**: No MongoDB pods in your ARO cluster
+- **Improved Reliability**: Azure's 99.99% SLA for Cosmos DB
+- **Automatic Scaling**: Cosmos DB scales throughput based on demand
+- **Global Distribution**: Option to distribute data globally if needed
+- **Security Improvements**: Managed encryption at rest and in transit
+
+### Challenge 4: GitHub Copilot Integration
 
 1. **Enable GitHub Copilot** in your development environment
 2. **Use Copilot to add a new feature** to the application. Some ideas:
@@ -165,7 +330,7 @@ Your CI/CD pipeline should handle the entire process from building your applicat
    - User authentication
 3. **Document how Copilot assisted** in the development process
 
-### Challenge 4: GitHub AI Models
+### Challenge 5: GitHub AI Models
 
 1. **Use GitHub AI Models** to:
    - Generate documentation for your code
@@ -175,7 +340,7 @@ Your CI/CD pipeline should handle the entire process from building your applicat
 2. **Compare the suggestions** against the original code
 3. **Implement at least one improvement** suggested by the AI
 
-### Challenge 5: GitHub Advanced Security
+### Challenge 6: GitHub Advanced Security
 
 1. **Enable GitHub Advanced Security** features:
    - Code scanning with CodeQL
@@ -185,7 +350,7 @@ Your CI/CD pipeline should handle the entire process from building your applicat
 3. **Address any security issues** identified by the scans
 4. **Implement dependency management** best practices
 
-### Challenge 6: Monitoring and Observability
+### Challenge 7: Monitoring and Observability
 
 1. **Set up basic monitoring** for your application in ARO
 2. **Implement logging** and configure log aggregation
