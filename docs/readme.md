@@ -16,7 +16,7 @@ Before starting, ensure you have:
 4. **Azure CLI** installed
 5. **Visual Studio Code** or your preferred IDE
 6. **Git** installed
-7. **Openshift CLI** installed
+7. **Openshift CLI** installed (https://docs.redhat.com/en/documentation/openshift_container_platform/4.2/html/cli_tools/openshift-cli-oc#cli-about-cli_cli-developer-commands)
 
 ## Getting Started
 
