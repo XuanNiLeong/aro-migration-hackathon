@@ -23,7 +23,7 @@ Before starting, ensure you have:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/microsoft/aro-migration-hackathon.git
+git clone https://github.com/owainow/aro-migration-hackathon.git
 cd aro-migration-hackathon
 ```
 
@@ -77,11 +77,11 @@ docker-compose up
 Once the application is running, you can access:
 - **Frontend**: http://localhost
 - **Backend API**: http://localhost:3001/api/tasks
-- **MongoDB Express**: http://localhost:8081 d
+- **MongoDB Express**: http://localhost:8081
 
 ### 3. Exploring the Database (Optional)
 
-1. Open MongoDB Express at http://localhost:8081. Default credentials are username: user and password: pass
+1. Open MongoDB Express at http://localhost:8081. Default credentials are username: `user` and password: `pass`
 2. Navigate through the interface to:
    - View the database structure
    - Create sample tasks
