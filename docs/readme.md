@@ -114,7 +114,7 @@ curl -X DELETE http://localhost:3001/api/tasks/TASK_ID
 
 Your team will need to complete the following challenges:
 
-### Challenge 1: Containerization and ARO Deployment
+### Challenge 1: Containerisation and ARO Deployment
 
 1. **Build and push the container images** to your Azure Container Registry
 2. **Deploy the application** to your ARO cluster using the provided Kubernetes manifests
@@ -291,7 +291,7 @@ Your CI/CD pipeline should handle the entire process from building your applicat
 
 ### Challenge 3: Database Modernization with Azure Cosmos DB
 
-While containerized MongoDB within ARO works for development, a production-ready architecture should leverage managed database services for better scalability, reliability, and operational efficiency.
+While containerised MongoDB within ARO works for development, a production-ready architecture should leverage managed database services for better scalability, reliability, and operational efficiency. I rebuke containerised databases...
 
 #### Your Challenge: Migrate to Azure Cosmos DB for MongoDB API
 
