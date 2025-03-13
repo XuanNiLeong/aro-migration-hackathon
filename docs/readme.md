@@ -10,8 +10,8 @@ In this challenge, you'll be migrating an "on-premises" application to ARO while
 
 Before starting, ensure you have:
 
-1. **Azure Account** with permissions to create resources
-2. **GitHub Account** 
+1. An **Azure Account** with permissions to create resources
+2. A **GitHub Account** 
 3. **Docker** installed locally
 4. **Azure CLI** installed
 5. **Visual Studio Code** or your preferred IDE
