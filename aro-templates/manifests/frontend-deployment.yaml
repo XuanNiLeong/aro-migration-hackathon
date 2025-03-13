@@ -4,7 +4,7 @@ metadata:
   name: frontend
   namespace: task-manager
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: frontend
@@ -13,11 +13,18 @@ spec:
       labels:
         app: frontend
     spec:
+      securityContext:
+        runAsUser: 1001
+        fsGroup: 1001
       containers:
       - name: frontend
         image: ${REGISTRY_URL}/task-manager-frontend:latest
         ports:
-        - containerPort: 80
+        - containerPort: 8080
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
         env:
         - name: REACT_APP_API_URL
           value: "/api"
@@ -28,6 +35,12 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "200m"
+        volumeMounts:
+        - name: nginx-temp
+          mountPath: /var/cache/nginx
+      volumes:
+      - name: nginx-temp
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -39,7 +52,7 @@ spec:
     app: frontend
   ports:
   - port: 80
-    targetPort: 80
+    targetPort: 8080
   type: ClusterIP
 ---
 apiVersion: route.openshift.io/v1

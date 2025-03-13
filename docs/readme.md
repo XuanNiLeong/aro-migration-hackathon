@@ -12,10 +12,11 @@ Before starting, ensure you have:
 
 1. **Azure Account** with permissions to create resources
 2. **GitHub Account** 
-3. **Docker Desktop** installed locally
+3. **Docker** installed locally
 4. **Azure CLI** installed
 5. **Visual Studio Code** or your preferred IDE
 6. **Git** installed
+7. **Openshift CLI** installed
 
 ## Getting Started
 
@@ -76,18 +77,18 @@ docker-compose up
 Once the application is running, you can access:
 - **Frontend**: http://localhost
 - **Backend API**: http://localhost:3001/api/tasks
-- **MongoDB Express**: http://localhost:8081
+- **MongoDB Express**: http://localhost:8081 d
 
-### 3. Exploring the Database
+### 3. Exploring the Database (Optional)
 
-1. Open MongoDB Express at http://localhost:8081
+1. Open MongoDB Express at http://localhost:8081. Default credentials are username: user and password: pass
 2. Navigate through the interface to:
    - View the database structure
    - Create sample tasks
    - Modify existing data
    - Observe how changes affect the application
 
-### 4. Testing the API
+### 4. Testing the API (Optional)
 
 You can use tools like cURL, Postman, or your browser to test the API:
 
@@ -119,6 +120,125 @@ Your team will need to complete the following challenges:
 2. **Deploy the application** to your ARO cluster using the provided Kubernetes manifests
 3. **Configure routes** to expose the application externally
 4. **Verify the deployment** and ensure it's working correctly
+
+### PreReq: Set ACR value in your manifests
+
+```bash
+# Navigate back to the repository root
+cd ../..
+
+
+sed -i "s|\${REGISTRY_URL}/task-manager-backend|$REGISTRY_URL/taskmanager-backend|g" aro-templates/manifests/backend-deployment.yaml
+sed -i "s|\${REGISTRY_URL}/task-manager-frontend|$REGISTRY_URL/taskmanager-frontend|g" aro-templates/manifests/frontend-deployment.yaml
+```
+
+Alternatively, you can edit the files manually:
+1. Open `aro-templates/manifests/backend-deployment.yaml` and `frontend-deployment.yaml`
+2. Find the line with `image: ${REGISTRY_URL}/task-manager-backend:latest` or similar
+3. Replace with your actual ACR URL, e.g., `image: myacr.azurecr.io/taskmanager-backend:latest`
+
+#### Option 1: Deploy Using the OpenShift CLI
+
+##### Step 1: Build and Push Container Images
+
+```bash
+# Log in to your ACR. You may need to load your environment file using the command "source .env"
+az acr login --name $ACR_NAME
+
+# Navigate to the frontend directory
+cd on-prem-app/frontend
+
+# Build and tag the frontend image
+docker build -t $ACR_NAME.azurecr.io/taskmanager-frontend:latest .
+
+# Push the frontend image
+docker push $ACR_NAME.azurecr.io/taskmanager-frontend:latest
+
+# Navigate to the backend directory
+cd ../backend
+
+# Build and tag the backend image
+docker build -t $ACR_NAME.azurecr.io/taskmanager-backend:latest .
+
+# Push the backend image
+docker push $ACR_NAME.azurecr.io/taskmanager-backend:latest
+```
+
+##### Step 2: Log in to ARO Using the CLI
+
+```bash
+# Log in to your ARO cluster through the UI
+echo Login to the Openshift Portal here: $OPENSHIFT_CONSOLE_URL
+
+# Navigate to your username in the top right and select "copy login token"
+
+# Login using the command provided with your token and server
+
+oc login --token=********** --server=**********
+
+```
+
+##### Step 3: Create a Project (Namespace)
+
+```bash
+# Create a project for the application
+oc new-project task-manager
+```
+
+##### Step 4: Create Image Pull Secret for ACR
+
+```bash
+# Create a secret for pulling images from ACR
+oc create secret docker-registry acr-secret \
+  --docker-server=$REGISTRY_URL \
+  --docker-username=$REGISTRY_USERNAME \
+  --docker-password=$REGISTRY_PASSWORD
+  
+# Link the secret to the service account
+oc secrets link default acr-secret --for=pull
+
+# Add security context constraints to allow service account to create frontend pod with custom security contexts for nginx.conf
+oc adm policy add-scc-to-user anyuid -z default -n task-manager
+```
+
+
+##### Step 5: Update and Apply Kubernetes Manifests
+
+```bash
+# Edit the deployment manifests to use your ACR
+# Replace ${YOUR_ACR_URL} with your actual ACR URL in the manifests
+
+# Apply the manifests
+cd ../..
+oc apply -f aro-templates/manifests/namespace.yaml
+oc apply -f aro-templates/manifests/mongodb-deployment.yaml
+oc apply -f aro-templates/manifests/backend-deployment.yaml
+oc apply -f aro-templates/manifests/frontend-deployment.yaml
+```
+
+##### Step 6: Verify the Deployment - CLI
+
+```bash
+# Check if pods are running
+oc get pods
+
+# Check the created routes
+oc get routes
+
+# Test the backend API
+curl http://$(oc get route backend-api -o jsonpath='{.spec.host}')/api/tasks
+
+# Open the frontend URL in your browser
+echo "Frontend URL: http://$(oc get route frontend -o jsonpath='{.spec.host}')"
+```
+
+
+##### Step 7: Verify the Deployment - UI
+
+1. Navigate back to the Openshift Console and go to **Workloads > Pods** to see if all pods are running
+2. Go to **Networking > Routes** to find URLs for your application
+3. Open the frontend route URL in your browser
+4. Test the application by creating, editing, and deleting tasks
 
 ### Challenge 2: GitHub CI/CD Pipeline
 
