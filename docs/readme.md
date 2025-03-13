@@ -314,20 +314,7 @@ az cosmosdb create \
   --server-version 4.0 \
   --default-consistency-level Session
 
-# Create the database
-az cosmosdb mongodb database create \
-  --account-name aro-task-manager-db \
-  --name taskmanager \
-  --resource-group $RESOURCE_GROUP
 
-# Create the tasks collection
-az cosmosdb mongodb collection create \
-  --account-name aro-task-manager-db \
-  --database-name taskmanager \
-  --name tasks \
-  --resource-group $RESOURCE_GROUP \
-  --shard _id
-  
 # Get the connection string
 CONNECTION_STRING=$(az cosmosdb keys list \
   --name aro-task-manager-db \
@@ -338,7 +325,7 @@ CONNECTION_STRING=$(az cosmosdb keys list \
 echo "Connection string: $CONNECTION_STRING"
 ```
 
-##### 2. Update Backend Application Code
+##### 2. Update Backend Application Code (potentially a copilot opp here!)
 
 Modify `backend/src/server.js` to handle Cosmos DB connections:
 
@@ -395,20 +382,20 @@ Create a new file called `backend-deployment-cosmos.yaml`:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend
+  name: backend-api
   namespace: task-manager
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: backend
+      app: backend-api
   template:
     metadata:
       labels:
-        app: backend
+        app: backend-api
     spec:
       containers:
-      - name: backend
+      - name: backend-api
         image: ${YOUR_ACR_URL}/taskmanager-backend:latest  # Will use the latest image built by CI
         ports:
         - containerPort: 3001
@@ -425,6 +412,9 @@ spec:
 Apply the updated deployment:
 
 ```bash
+# Delete the existing backend API deployment
+kubectl delete deployment backend-api
+
 # Replace ${YOUR_ACR_URL} with your actual ACR URL
 sed "s|\${YOUR_ACR_URL}|$ACR_LOGIN_SERVER|g" backend-deployment-cosmos.yaml | oc apply -f -
 
