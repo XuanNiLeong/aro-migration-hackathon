@@ -3,6 +3,10 @@ kind: Deployment
 metadata:
   name: frontend
   namespace: task-manager
+  labels:
+    app: frontend
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: taskmanager-app
 spec:
   replicas: 1
   selector:
@@ -18,9 +22,10 @@ spec:
         fsGroup: 1001
       containers:
       - name: frontend
-        image: ${REGISTRY_URL}/task-manager-frontend:latest
+        image: ${REGISTRY_URL}/taskmanager-frontend:latest
         ports:
         - containerPort: 8080
+          name: http
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -47,11 +52,14 @@ kind: Service
 metadata:
   name: frontend
   namespace: task-manager
+  labels:
+    app: frontend
 spec:
   selector:
     app: frontend
   ports:
-  - port: 80
+  - name: 8080-tcp
+    port: 80
     targetPort: 8080
   type: ClusterIP
 ---
@@ -60,9 +68,19 @@ kind: Route
 metadata:
   name: frontend-route
   namespace: task-manager
+  labels:
+    app: frontend
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: taskmanager-app
 spec:
+  host: frontend-route-task-manager.apps.zys6uf49.uksouth.aroapp.io
   to:
     kind: Service
     name: frontend
+    weight: 100
   port:
-    targetPort: 80
+    targetPort: 8080-tcp
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

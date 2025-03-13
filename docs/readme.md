@@ -148,8 +148,9 @@ az acr login --name $ACR_NAME
 # Navigate to the frontend directory
 cd on-prem-app/frontend
 
-# Build and tag the frontend image
-docker build -t $ACR_NAME.azurecr.io/taskmanager-frontend:latest .
+# Build using the OpenShift-specific Dockerfile
+docker build -t $ACR_NAME.azurecr.io/taskmanager-frontend:latest --build-arg REACT_APP_API_URL=/api -f Dockerfile.openshift .
+
 
 # Push the frontend image
 docker push $ACR_NAME.azurecr.io/taskmanager-frontend:latest
@@ -210,7 +211,7 @@ oc adm policy add-scc-to-user anyuid -z default -n task-manager
 
 # Apply the manifests
 cd ../..
-oc apply -f aro-templates/manifests/namespace.yaml
+
 oc apply -f aro-templates/manifests/mongodb-deployment.yaml
 oc apply -f aro-templates/manifests/backend-deployment.yaml
 oc apply -f aro-templates/manifests/frontend-deployment.yaml
@@ -231,7 +232,18 @@ curl http://$(oc get route backend-api -o jsonpath='{.spec.host}')/api/tasks
 # Open the frontend URL in your browser
 echo "Frontend URL: http://$(oc get route frontend -o jsonpath='{.spec.host}')"
 ```
+Now create a task and check the frontend has called the backend and put the entry in the db.
+```bash
 
+# Connect to MongoDB pod
+MONGO_POD=$(kubectl get pods -l app=mongodb -o jsonpath='{.items[0].metadata.name}')
+
+# Open MongoDB shell
+kubectl exec -it $MONGO_POD -- mongosh taskmanager
+
+# In the MongoDB shell, list all tasks
+db.tasks.find().pretty()
+```
 
 ##### Step 7: Verify the Deployment - UI
 
@@ -239,6 +251,8 @@ echo "Frontend URL: http://$(oc get route frontend -o jsonpath='{.spec.host}')"
 2. Go to **Networking > Routes** to find URLs for your application
 3. Open the frontend route URL in your browser
 4. Test the application by creating, editing, and deleting tasks
+
+
 
 ### Challenge 2: GitHub CI/CD Pipeline
 
@@ -312,7 +326,7 @@ az cosmosdb mongodb collection create \
   --database-name taskmanager \
   --name tasks \
   --resource-group $RESOURCE_GROUP \
-  --shard key _id
+  --shard _id
   
 # Get the connection string
 CONNECTION_STRING=$(az cosmosdb keys list \
