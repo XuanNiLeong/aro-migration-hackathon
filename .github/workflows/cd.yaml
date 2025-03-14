@@ -48,7 +48,7 @@ jobs:
       id: meta
       uses: docker/metadata-action@v4
       with:
-        images: ${{ env.REGISTRY_URL }}/taskmanager-backend
+        images: ${{ env.REGISTRY_URL }}/task-manager-backend
         tags: |
           type=sha,format=short
           type=ref,event=branch
@@ -61,14 +61,14 @@ jobs:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=registry,ref=${{ env.REGISTRY_URL }}/taskmanager-backend:buildcache
-        cache-to: type=registry,ref=${{ env.REGISTRY_URL }}/taskmanager-backend:buildcache,mode=max
+        cache-from: type=registry,ref=${{ env.REGISTRY_URL }}/task-manager-backend:buildcache
+        cache-to: type=registry,ref=${{ env.REGISTRY_URL }}/task-manager-backend:buildcache,mode=max
 
     - name: Extract frontend metadata
       id: meta-frontend
       uses: docker/metadata-action@v4
       with:
-        images: ${{ env.REGISTRY_URL }}/taskmanager-frontend
+        images: ${{ env.REGISTRY_URL }}/task-manager-frontend
         tags: |
           type=sha,format=short
           type=ref,event=branch
@@ -81,8 +81,8 @@ jobs:
         push: true
         tags: ${{ steps.meta-frontend.outputs.tags }}
         labels: ${{ steps.meta-frontend.outputs.labels }}
-        cache-from: type=registry,ref=${{ env.REGISTRY_URL }}/taskmanager-frontend:buildcache
-        cache-to: type=registry,ref=${{ env.REGISTRY_URL }}/taskmanager-frontend:buildcache,mode=max
+        cache-from: type=registry,ref=${{ env.REGISTRY_URL }}/task-manager-frontend:buildcache
+        cache-to: type=registry,ref=${{ env.REGISTRY_URL }}/task-manager-frontend:buildcache,mode=max
 
   deploy-dev:
     name: Deploy to Development
@@ -117,8 +117,8 @@ jobs:
         envsubst < ./aro-templates/manifests/mongodb-deployment.yaml | oc apply -f -
         
         # Update image tags in deployment files and apply
-        sed -i "s|image: \${REGISTRY_URL}/taskmanager-backend:latest|image: ${REGISTRY_URL}/taskmanager-backend:${IMAGE_TAG}|g" ./aro-templates/manifests/backend-deployment.yaml
-        sed -i "s|image: \${REGISTRY_URL}/taskmanager-frontend:latest|image: ${REGISTRY_URL}/taskmanager-frontend:${IMAGE_TAG}|g" ./aro-templates/manifests/frontend-deployment.yaml
+        sed -i "s|image: \${REGISTRY_URL}/task-manager-backend:latest|image: ${REGISTRY_URL}/task-manager-backend:${IMAGE_TAG}|g" ./aro-templates/manifests/backend-deployment.yaml
+        sed -i "s|image: \${REGISTRY_URL}/task-manager-frontend:latest|image: ${REGISTRY_URL}/task-manager-frontend:${IMAGE_TAG}|g" ./aro-templates/manifests/frontend-deployment.yaml
         
         envsubst < ./aro-templates/manifests/backend-deployment.yaml | oc apply -f -
         envsubst < ./aro-templates/manifests/frontend-deployment.yaml | oc apply -f -
@@ -181,8 +181,8 @@ jobs:
         find ./aro-templates/manifests -name "*.yaml" -exec bash -c 'envsubst < {} | sed "s/task-manager/task-manager-staging/g" | oc apply -f -' \;
         
         # Update image tags in deployment files
-        oc set image deployment/backend-api backend-api=${REGISTRY_URL}/taskmanager-backend:${IMAGE_TAG} -n task-manager-staging
-        oc set image deployment/frontend frontend=${REGISTRY_URL}/taskmanager-frontend:${IMAGE_TAG} -n task-manager-staging
+        oc set image deployment/backend-api backend-api=${REGISTRY_URL}/task-manager-backend:${IMAGE_TAG} -n task-manager-staging
+        oc set image deployment/frontend frontend=${REGISTRY_URL}/task-manager-frontend:${IMAGE_TAG} -n task-manager-staging
     
     - name: Get Route URL
       id: get-url
@@ -236,7 +236,7 @@ jobs:
             sed "s/task-manager/task-manager-prod/g" | 
             sed "s/name: frontend/name: frontend-green/g" |
             sed "s/app: frontend/app: frontend-green/g" |
-            sed "s|image: \${REGISTRY_URL}/taskmanager-frontend:latest|image: ${REGISTRY_URL}/taskmanager-frontend:${IMAGE_TAG}|g" |
+            sed "s|image: \${REGISTRY_URL}/task-manager-frontend:latest|image: ${REGISTRY_URL}/task-manager-frontend:${IMAGE_TAG}|g" |
             oc apply -f -
           
           # Wait for green deployment to be ready
@@ -261,7 +261,7 @@ jobs:
             sed "s/task-manager/task-manager-prod/g" | 
             sed "s/name: frontend/name: frontend-blue/g" |
             sed "s/app: frontend/app: frontend-blue/g" |
-            sed "s|image: \${REGISTRY_URL}/taskmanager-frontend:latest|image: ${REGISTRY_URL}/taskmanager-frontend:${IMAGE_TAG}|g" |
+            sed "s|image: \${REGISTRY_URL}/task-manager-frontend:latest|image: ${REGISTRY_URL}/task-manager-frontend:${IMAGE_TAG}|g" |
             oc apply -f -
             
           # Wait for blue deployment to be ready
@@ -284,7 +284,7 @@ jobs:
         cat ./aro-templates/manifests/mongodb-deployment.yaml | sed "s/task-manager/task-manager-prod/g" | oc apply -f -
         cat ./aro-templates/manifests/backend-deployment.yaml | 
           sed "s/task-manager/task-manager-prod/g" | 
-          sed "s|image: \${REGISTRY_URL}/taskmanager-backend:latest|image: ${REGISTRY_URL}/taskmanager-backend:${IMAGE_TAG}|g" |
+          sed "s|image: \${REGISTRY_URL}/task-manager-backend:latest|image: ${REGISTRY_URL}/task-manager-backend:${IMAGE_TAG}|g" |
           oc apply -f -
         cat ./aro-templates/manifests/api-route.yaml | sed "s/task-manager/task-manager-prod/g" | oc apply -f -
     
