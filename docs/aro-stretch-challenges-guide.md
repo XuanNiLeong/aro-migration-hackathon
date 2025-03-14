@@ -1,4 +1,4 @@
-# Azure Red Hat OpenShift (ARO) Stretch Challenges Guide
+# Azure Red Hat OpenShift (ARO) Stretch Challenges Guides
 
 This guide outlines additional stretch challenges for teams who have successfully deployed the Task Manager application to ARO. These challenges will help you explore advanced ARO features and optimize your deployment.
 
